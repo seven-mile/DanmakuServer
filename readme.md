@@ -58,7 +58,7 @@ index be295d3..3b1871d 100644
 
 ## Screenshots
 
-// TODO
+[2023-08-04 13-11-39.webm](https://github.com/seven-mile/DanmakuServer/assets/56445491/649419b3-dcdf-4eda-8dc4-35167b7fd4a0)
 
 ## Implementation
 
