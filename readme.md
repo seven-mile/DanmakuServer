@@ -29,20 +29,27 @@ Best experience when used with:
 
 ```diff
 diff --git a/danmu/main.py b/danmu/main.py
-index be295d3..3b1871d 100644
+index be295d3..eb1ac84 100644
 --- a/danmu/main.py
 +++ b/danmu/main.py
-@@ -4,12 +4,19 @@
-
+@@ -4,12 +4,25 @@
+ 
  import asyncio
  import danmaku
+-
 +import requests
-
++
 +def send_to_danmaku_server(name, content):
 +    PORT = 7654
-+    resps = requests.get(f'http://localhost:{PORT}/danmaku?name={name}&content={content}').json()
-+    if resps['code'] != 0:
-+        print('[DanmakuServer] error: ', resps['message'])
++    try:
++        resps = requests.get(f'http://localhost:{PORT}/danmaku', params={
++            'name': name,
++            'content': content
++        }).json()
++        if resps['code'] != 0:
++            print('[DanmakuServer] error: ', resps['message'])
++    except:
++        pass
 
  async def printer(q):
      while True:
