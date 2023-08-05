@@ -1,206 +1,252 @@
 ﻿#include "pch.h"
 
-#include <tuple>
-#include <random>
-#include <format>
-#include <functional>
-#include <queue>
-#include <map>
-#include <unordered_map>
-#include <optional>
+#include "config.hpp"
+
+#include "resource.h"
+#include <CommCtrl.h>
+
+#include <Mile.Xaml.h>
+
+//#include "Xaml/App.h"
+#include "Xaml/SettingsPage.h"
 
 import dcomp;
+import danmaku;
 import server;
 
-#pragma comment(lib, "dxgi")
-#pragma comment(lib, "d3d11")
-#pragma comment(lib, "d2d1")
-#pragma comment(lib, "dcomp")
-#pragma comment(lib, "dwmapi")
+#pragma comment(lib, "Comctl32.lib")
 
-namespace found = winrt::Windows::Foundation;
-namespace ui = winrt::Windows::UI;
-namespace comp = ui::Composition;
-namespace uicore = ui::Core;
-namespace threading = winrt::Windows::System::Threading;
+class SettingsWnd : public ATL::CWindowImpl<SettingsWnd> {
 
-using namespace std::chrono_literals;
+public:
+  BEGIN_MSG_MAP(SettingsWnd)
+  MESSAGE_HANDLER(WM_CREATE, OnCreate)
+  MESSAGE_HANDLER(WM_CLOSE, OnClose)
+  END_MSG_MAP()
 
-template <typename T, typename U>
-inline auto ceil_div(T a, U b) {
-  return (a + b - 1) / b;
-}
+  DECLARE_WND_SUPERCLASS(_T("Danmaku.SettingsWindow"), _T("Mile.Xaml.ContentWindow"));
 
-class DanmakuManager {
-  using lane_id_t = int;
-  using danmaku_t = comp::Visual;
-  using deleter_t = std::function<void(danmaku_t)>;
-
-  static constexpr float danmaku_height = 32;
-  static constexpr auto duration = 10000ms;
-
-  comp::Compositor compositor;
-  comp::ContainerVisual root;
-  comp::CompositionEasingFunction spring;
-
-  std::mutex mtx;
-
-  float scr_width = 1.f * GetSystemMetrics(SM_CXSCREEN);
-  float scr_height = 1.f * GetSystemMetrics(SM_CYSCREEN);
-
-  lane_id_t lane_cnt;
-  std::map<lane_id_t, std::queue<std::tuple<danmaku_t, deleter_t>>> lane_state;
-
-  // returns if this lane is ready to issue
-  bool AllocLane(danmaku_t danmaku, deleter_t deleter, lane_id_t &id) {
-    // lane count is just ~60, no need to optimize
-    auto it = std::min_element(lane_state.begin(), lane_state.end(), [](auto &a, auto &b) {
-      return a.second.size() < b.second.size();
-    });
-    bool issuable = it->second.empty();
-    it->second.emplace(danmaku, deleter);
-    id = it->first;
-    return issuable;
+  LRESULT OnCreate(UINT, WPARAM, LPARAM, BOOL &handled) {
+    handled = false;
+    SetIcon(LoadIcon(_AtlBaseModule.GetResourceInstance(), MAKEINTRESOURCE(IDI_SETTINGS)), TRUE);
+    return S_OK;
   }
 
-  void PopLane(lane_id_t id) {
-    lane_state[id].pop();
+  LRESULT OnClose(UINT, WPARAM, LPARAM, BOOL &) {
+    // overrides default, no quit message, just hide it
+    ShowWindow(false);
+    return S_OK;
   }
 
-  float GetLanePosY(lane_id_t id) {
-    return id * danmaku_height;
+  static SettingsWnd &singleton() {
+    static SettingsWnd wnd;
+    return wnd;
   }
 
-  void IssueLane(lane_id_t lane_id) {
-    auto &&[danmaku, deleter] = lane_state[lane_id].front();
-    auto width = danmaku.Size().x;
-    auto ypos = GetLanePosY(lane_id);
+  static LPCTSTR GetWndCaption() {
+    return _T("Danmaku Server Settings");
+  }
 
-    auto batch = compositor.CreateScopedBatch(comp::CompositionBatchTypes::Animation);
-    
-    auto duration1 = std::chrono::duration_cast<found::TimeSpan>(
-      duration * (width / (width + scr_width)));
-    auto duration2 = duration - duration1;
+  static DWORD GetWndStyle(DWORD dwStyle) {
+    return dwStyle | WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
+  }
 
-    // Apply screen entry animation
+};
+
+class ShellIconWnd
+    : public ATL::CWindowImpl<ShellIconWnd> {
+public:
+  DECLARE_WND_CLASS(_T("ShellIconHiddenWindow"));
+
+private:
+  BEGIN_MSG_MAP(ShellIconWnd)
+  MESSAGE_HANDLER(WM_USER, OnNIProc)
+  END_MSG_MAP()
+
+  static constexpr // {87810064-5698-45EB-B53D-B6CBD1924EB1}
+  const GUID GUID_TRAY_ICON = 
+  { 0x87810064, 0x5698, 0x45eb, { 0xb5, 0x3d, 0xb6, 0xcb, 0xd1, 0x92, 0x4e, 0xb1 } };
+
+  void ShowAbout() {
+    TASKDIALOGCONFIG td{};
+    td.cbSize = sizeof(td);
+    td.hwndParent = m_hWnd;
+    td.hInstance = GetModuleHandle(NULL);
+    td.dwFlags = TDF_ENABLE_HYPERLINKS;
+    td.pszMainIcon = MAKEINTRESOURCE(m_CurrentIconResource);
+    td.pszWindowTitle = L"About";
+    td.pszMainInstruction = L"Danmaku Server 1.1";
+    td.pszContent = 
+LR"(Please check our <a href="https://github.com/seven-mile/DanmakuServer">GitHub Repo</a> for more information.
+The danmaku server is hosted on :7654 port, access <a href="http://localhost:7654/danmaku?name=danmaku%20server&content=hello,%20world">this url</a> for sample danmaku effect.)";
+    td.nDefaultButton = TDCBF_OK_BUTTON;
+    td.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lParam, LONG_PTR) {
+      if (msg == TDN_HYPERLINK_CLICKED) {
+        ShellExecute(hwnd, L"open", (LPCWSTR)lParam, NULL, NULL, SW_SHOW);
+      }
+      return S_OK;
+    };
+
+    winrt::check_hresult(TaskDialogIndirect(&td, NULL, NULL, NULL));
+  }
+
+  void ShowSettings() {
+    SettingsWnd::singleton().ShowWindow(true);
+    SettingsWnd::singleton().SetActiveWindow();
+  }
+
+  HRESULT CreateShell() {
+
+    RECT rect{};
+
+    // Create a hidden window (using CWindowImpl)
+    HWND hWnd = Create(NULL, rect, L"ShellIconHiddenWindow", WS_POPUP);
+
+    if (hWnd != 0) // Was created?
     {
-      auto anim = compositor.CreateVector3KeyFrameAnimation();
-      anim.InsertKeyFrame(0.F, {scr_width, ypos, 0}, spring);
-      anim.InsertKeyFrame(1.F, {scr_width-width, ypos, 0}, spring);
-      anim.Duration(duration1);
-      anim.IterationBehavior(comp::AnimationIterationBehavior::Count);
-      anim.IterationCount(1);
-      danmaku.StartAnimation(L"Offset", anim);
+      // Add the icon into the shell
+      ShellNotify(NIM_ADD);
+      ShellNotify(NIM_SETVERSION);
+      return S_OK;
+    } else {
+      return HRESULT_FROM_WIN32(GetLastError());
+    }
+  }
+
+  void DestroyShell() {
+    ShellNotify(NIM_DELETE); // Remove the icon
+    if (m_hWnd != NULL) {
+      // Get rid of the hidden window
+      DestroyWindow();
+    }
+  }
+
+  void ShellNotify(DWORD msg) {
+
+    NOTIFYICONDATA notifyIconData{};
+    notifyIconData.cbSize = sizeof(notifyIconData);
+    notifyIconData.guidItem = GUID_TRAY_ICON;
+    notifyIconData.uVersion = NOTIFYICON_VERSION_4;
+    notifyIconData.hWnd = m_hWnd;
+    notifyIconData.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP | NIF_GUID;
+    notifyIconData.uCallbackMessage = WM_USER;
+    notifyIconData.uID = 0;
+
+    notifyIconData.hIcon = ::LoadIcon(GetModuleHandle(NULL),
+                                      MAKEINTRESOURCE(m_CurrentIconResource));
+    ::lstrcpyn(notifyIconData.szTip, m_CurrentText.c_str(),
+               ARRAYSIZE(notifyIconData.szTip)); // Limit to 64 chars
+    ::Shell_NotifyIcon(msg, &notifyIconData);
+  }
+
+  LRESULT OnNIProc(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
+                   BOOL & /*bHandled*/) {
+
+    switch (LOWORD(lParam)) {
+      case NIN_SELECT:
+        // for NOTIFYICON_VERSION_4 clients, NIN_SELECT is prerable to listening
+        // to mouse clicks and key presses directly.
+        break;
+
+      case NIN_BALLOONTIMEOUT:
+        break;
+
+      case NIN_BALLOONUSERCLICK:
+        break;
+
+      case WM_CONTEXTMENU: {
+        POINT const pt = {LOWORD(wParam), HIWORD(wParam)};
+        int cmd = ShowPopupMenu(IDM_TRAY, pt);
+        if (cmd == IDMI_EXIT) {
+          PostQuitMessage(0);
+        } else if (cmd == IDMI_ABOUT) {
+          ShowAbout();
+        } else if (cmd == IDMI_SETTINGS) {
+          ShowSettings();
+        }
+      } break;
     }
 
-    batch.End();
-
-    // When the danmaku is off the screen edge,
-    // free the lane and start the remaining animation
-    batch.Completed([=, this](auto &, auto &){
-      std::lock_guard g{mtx};
-      // Pop issuing for other danmaku
-      assert(std::get<0>(lane_state[lane_id].front()) == danmaku);
-      PopLane(lane_id);
-      // Issue right after the vacancy
-      if (lane_state[lane_id].size())
-        IssueLane(lane_id);
-
-      auto batch = compositor.CreateScopedBatch(comp::CompositionBatchTypes::Animation);
-  
-      auto ypos = danmaku.Offset().y;
-      auto width = danmaku.Size().x;
-
-      // Apply screen entry animation
-      {
-        // it's a tunable position offset to
-        // pretend the animation is connected
-        constexpr int CPU_OFFSET = 0;
-        auto anim = compositor.CreateVector3KeyFrameAnimation();
-        anim.InsertKeyFrame(0.F, {scr_width-width-CPU_OFFSET, ypos, 0}, spring);
-        anim.InsertKeyFrame(1.F, {-width, ypos, 0}, spring);
-        anim.Duration(duration2);
-        anim.IterationBehavior(comp::AnimationIterationBehavior::Count);
-        anim.IterationCount(1);
-        danmaku.StartAnimation(L"Offset", anim);
-      }
-
-      batch.End();
-
-      batch.Completed([deleter, danmaku](auto &, auto &) {
-        // free it
-        deleter(danmaku);
-      });
-    });
+    return 0;
   }
 
 public:
 
-  DanmakuManager(comp::Compositor compositor, comp::ContainerVisual root)
-    : compositor(compositor), root(root),
-      spring(compositor.CreateLinearEasingFunction()) {
-    lane_cnt = int(floor(scr_height / danmaku_height - 1));
-    for (int i = 0; i < lane_cnt; ++i) {
-      lane_state[i] = {};
-    }
+  static ShellIconWnd &singleton() {
+    static ShellIconWnd wnd{};
+    return wnd;
   }
 
-  std::tuple<danmaku_t, lane_id_t> CreateDanmaku(std::wstring const &text, deleter_t deleter) {
-    std::lock_guard g{mtx};
+  void SetShellTipText(std::wstring const &TipText) {
+    // Save this text for when we update
+    m_CurrentText = TipText;
+    ShellNotify(NIM_MODIFY);
+  }
 
-    static std::default_random_engine rd{998244353};
-    std::uniform_int_distribution rgb_gen{0, 255};
+  void SetShellIcon(WORD IconResource) {
+    // Save this icon resource for when we update
+    m_CurrentIconResource = IconResource;
+    ShellNotify(NIM_MODIFY);
+  }
 
-    
-    auto danmaku = compositor.CreateContainerVisual();
-    lane_id_t lane_id{-1};
-    bool issuable = AllocLane(danmaku, deleter, lane_id);
-    auto ypos = GetLanePosY(lane_id);
-
-    OutputDebugString(std::format(L"Allocated lane {}, with ypos = {}; "
-      "now has {} danmaku(s)\n", lane_id, ypos, lane_state[lane_id].size()).c_str());
-
-    danmaku.Offset({scr_width, ypos, 0});
-
-    // construct danmaku visual
+  void SetShellVisible(bool bVisible = true) {
+    if (bVisible == true) // User wants to show the icon in the shell
     {
-      auto text_visual = dcomp::CreateTextVisual(compositor, text);
-
-      auto drop_shadow = compositor.CreateDropShadow();
-      drop_shadow.BlurRadius(5.f);
-      drop_shadow.Opacity(1.f);
-      drop_shadow.Color(ui::Colors::Black());
-
-      auto text_mask = compositor.CreateMaskBrush();
+      if (m_bVisible == false) // Doesn't already exist?
       {
-        auto text_mask_brush = compositor.CreateColorBrush();
-        text_mask_brush.Color(ui::Colors::Black());
-        text_mask.Source(text_mask_brush);
-        text_mask.Mask(text_visual.Brush());
+        // Create the shell, and timer (if applicable)
+        CreateShell();
+      } // Otherwise, well you already have icon in the shell. :-)
+    } else // User wants rid of the icon
+    {
+      if (m_bVisible == true) // Is it there already?
+      {
+        DestroyShell(); // Get rid
       }
-      drop_shadow.Mask(text_mask);
-
-      text_visual.Shadow(drop_shadow);
-
-      danmaku.Children().InsertAtTop(text_visual);
-      danmaku.Size({text_visual.Size().x, danmaku_height});
     }
 
-    if (issuable)
-      IssueLane(lane_id);
-
-    return {danmaku, lane_id};
+    m_bVisible = bVisible;
   }
 
-  void IssueDanmaku(std::wstring const &text) {
-    auto &&[danmaku, lane_id] = CreateDanmaku(text, [this](comp::Visual danmaku){
-      danmaku.StopAnimation(L"Offset");
-      // remove to free memory
-      root.Children().Remove(danmaku);
-    });
-    root.Children().InsertAtTop(danmaku);
+  int ShowPopupMenu(WORD PopupMenuResource, POINT pt) {
+    HMENU hMenu, hPopup = 0;
+
+    hMenu = ::LoadMenu(GetModuleHandle(NULL),
+                       MAKEINTRESOURCE(PopupMenuResource));
+
+    if (hMenu != 0) {
+      //POINT pt;
+      //::GetCursorPos(&pt);
+
+      // TrackPopupMenu cannot display the menu bar so get
+      // a handle to the first shortcut menu.
+      hPopup = ::GetSubMenu(hMenu, 0);
+
+      // To display a context menu for a notification icon, the
+      // current window must be the foreground window before the
+      // application calls TrackPopupMenu or TrackPopupMenuEx. Otherwise,
+      // the menu will not disappear when the user clicks outside of the menu
+      // or the window that created the menu (if it is visible).
+      ::SetForegroundWindow(m_hWnd);
+
+      int cmd = ::TrackPopupMenu(hPopup, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.x,
+                                  pt.y, 0, m_hWnd, NULL);
+
+      // See MS KB article Q135788
+      ::PostMessage(m_hWnd, WM_NULL, 0, 0);
+
+      // Clear up the menu, we're not longer using it.
+      ::DestroyMenu(hMenu);
+      return cmd;
+    }
+    return 0;
   }
 
+private:
+  bool m_bVisible;
+
+  int m_CurrentIconResource;
+  std::wstring m_CurrentText;
 };
 
 class DanmakuWnd : public ATL::CWindowImpl<DanmakuWnd> {
@@ -211,7 +257,7 @@ class DanmakuWnd : public ATL::CWindowImpl<DanmakuWnd> {
   comp::ContainerVisual root{nullptr};
   uicore::CoreDispatcher dispatcher{nullptr};
 
-  std::unique_ptr<DanmakuManager> danmaku_mgr;
+  std::unique_ptr<danmaku::DanmakuManager> danmaku_mgr;
   std::unique_ptr<server::DanmakuServer> danmaku_srv;
 
 public:
@@ -223,7 +269,10 @@ public:
 
   DECLARE_WND_CLASS(_T("DanmakuOverlay"));
 
-  static constexpr float OPACITY = 1.F;
+  static DanmakuWnd &singleton() {
+    static DanmakuWnd wnd;
+    return wnd;
+  }
 
   void TestDanmakuSingleIssueMode() {
     static std::default_random_engine rd{998244353};
@@ -246,12 +295,12 @@ public:
   }
 
   LRESULT OnCreate(UINT, WPARAM, LPARAM, BOOL &) {
+    SetIcon(LoadIcon(_AtlBaseModule.GetResourceInstance(), MAKEINTRESOURCE(IDI_DANMAKU)), TRUE);
+
     dispatcher = dcomp::GetOrCreateCoreDispatcher();
     std::tie(compositor, root) = dcomp::CreateCompositorForWindow(m_hWnd);
 
-    danmaku_mgr = std::make_unique<DanmakuManager>(compositor, root);
-
-    root.Opacity(OPACITY);
+    danmaku_mgr = std::make_unique<danmaku::DanmakuManager>(compositor, root);
 
     //TestDanmakuSingleIssueMode();
     //TestDanmakuCanvasMode();
@@ -278,28 +327,56 @@ public:
 
   static DWORD GetWndExStyle(DWORD dwStyle) {
     return dwStyle | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST
-      | WS_EX_NOREDIRECTIONBITMAP;
+      | WS_EX_NOREDIRECTIONBITMAP | WS_EX_TOOLWINDOW;
   }
 };
 
 int APIENTRY wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
 
-  DanmakuWnd wnd{};
+  auto &wnd = DanmakuWnd::singleton();
+  auto &tray_icon = ShellIconWnd::singleton();
+  auto &settings = SettingsWnd::singleton();
+
+  //auto xaml_app = winrt::make<winrt::DanmakuServer::implementation::App>();
+  winrt::check_hresult(::MileXamlGlobalInitialize());
+
+  tray_icon.SetShellVisible();
+
+  tray_icon.SetShellIcon(IDI_DANMAKU);
+  tray_icon.SetShellTipText(L"DanmakuServer listening on :7654");
 
   auto scr_width = GetSystemMetrics(SM_CXSCREEN);
   auto scr_height = GetSystemMetrics(SM_CYSCREEN);
 
-  RECT rect{0, 0, scr_width, scr_height};
-  wnd.Create(NULL, rect);
+  {
+    RECT rect_full{0, 0, scr_width, scr_height};
+    wnd.Create(NULL, rect_full);
+  }
 
-  wnd.ShowWindow(TRUE);
+  {
+    constexpr auto SETTINGS_WIDTH = 1200, SETTINGS_HEIGHT = 900;
+    RECT rect_settings{
+      (scr_width - SETTINGS_WIDTH) / 2,
+      (scr_height - SETTINGS_HEIGHT) / 2,
+      (scr_width + SETTINGS_WIDTH) / 2,
+      (scr_height + SETTINGS_HEIGHT) / 2};
+    auto page = winrt::make<winrt::DanmakuServer::implementation::SettingsPage>();
+    settings.Create(NULL, rect_settings, NULL, 0, 0, 0U, winrt::get_abi(page));
+  }
+
+  wnd.ShowWindow(true);
   wnd.SetActiveWindow();
 
   auto dispatcher = dcomp::GetOrCreateCoreDispatcher();
-
   dispatcher.ProcessEvents(uicore::CoreProcessEventsOption::ProcessUntilQuit);
 
   wnd.DestroyWindow();
+  settings.DestroyWindow();
+
+  // destroy icon for window release
+  tray_icon.SetShellVisible(false);
+
+  winrt::check_hresult(::MileXamlGlobalUninitialize());
 
   return 0;
 }

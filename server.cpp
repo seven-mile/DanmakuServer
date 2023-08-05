@@ -1,11 +1,8 @@
 #include "pch.h"
 
 #include <atomic>
-#include <format>
-#include <functional>
 #include <string>
-#include <map>
-#include <sstream>
+#include <iostream>
 #include <thread>
 #include <memory>
 
@@ -28,7 +25,7 @@ void SendHttpJsonResponse(HANDLE req_queue, HTTP_REQUEST &req, USHORT status,
   RtlZeroMemory(&response, sizeof(response));
   response.StatusCode = status;
   response.pReason = reason.c_str();
-  response.ReasonLength = reason.size();
+  response.ReasonLength = (USHORT)reason.size();
 
   // Add a known header.
   LPCSTR type = "application/json";
@@ -41,7 +38,7 @@ void SendHttpJsonResponse(HANDLE req_queue, HTTP_REQUEST &req, USHORT status,
   // Add an entity chunk.
   dataChunk.DataChunkType = HttpDataChunkFromMemory;
   dataChunk.FromMemory.pBuffer = const_cast<char *>(body.c_str());
-  dataChunk.FromMemory.BufferLength = body.size();
+  dataChunk.FromMemory.BufferLength = (ULONG)body.size();
   response.EntityChunkCount = 1;
   response.pEntityChunks = &dataChunk;
 
@@ -60,32 +57,12 @@ void SendHttpJsonResponse(HANDLE req_queue, HTTP_REQUEST &req, USHORT status,
                                           ));
 }
 
-//std::wstring UrlDecode(const std::wstring& input) {
-//    std::wstring decoded_string;
-//    char ch;
-//    int i, j;
-//
-//    for (i = 0; i < input.length(); i++) {
-//        if (int(input[i]) == 37) { // ASCII value of '%'
-//            std::wstringstream iss(input.substr(i + 1, 2));
-//            iss >> std::hex >> j;
-//            ch = static_cast<char>(j);
-//            decoded_string += ch;
-//            i += 2;
-//        } else {
-//            decoded_string += input[i];
-//        }
-//    }
-//
-//    return decoded_string;
-//}
-
 std::wstring UrlDecodeWString(std::wstring const &input) {
   std::wstring result;
   DWORD cnt;
-  AtlUnescapeUrl(input.c_str(), result.data(), &cnt, result.size());
+  AtlUnescapeUrl(input.c_str(), result.data(), &cnt, DWORD(result.size()));
   result.resize(cnt);
-  winrt::check_bool(AtlUnescapeUrl(input.c_str(), result.data(), &cnt, result.size()));
+  winrt::check_bool(AtlUnescapeUrl(input.c_str(), result.data(), &cnt, DWORD(result.size())));
   result.resize(lstrlenW(result.data()));
   return result;
 }

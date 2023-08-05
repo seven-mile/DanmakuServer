@@ -1,0 +1,22 @@
+namespace DanmakuServer
+{
+    [bindable]
+    [default_interface]
+    runtimeclass SettingsPageViewModel : Windows.UI.Xaml.Data.INotifyPropertyChanged
+    {
+        SettingsPageViewModel();
+        Single Opacity;
+        Single DurationInSec;
+        Single DanmakuHeight;
+        Int32 RequestedLaneCount;
+        Single FontSize;
+        String FontFamily{get;};
+        Int32 FontIndex;
+
+        Windows.Foundation.Collections.IObservableVector<String> InstalledFonts{ get; };
+
+        void ApplyChanges();
+        void LoadFromCurrent();
+        void ResetDefault();
+    }
+}

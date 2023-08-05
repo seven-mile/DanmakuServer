@@ -2,10 +2,15 @@
 
 #include <dwrite.h>
 
-// This is for ABI
 #include <windows.ui.composition.interop.h>
 
-//#include <winrt/Windows.UI.Composition.Desktop.h>
+#include "config.hpp"
+
+#pragma comment(lib, "dxgi")
+#pragma comment(lib, "d3d11")
+#pragma comment(lib, "d2d1")
+#pragma comment(lib, "dcomp")
+#pragma comment(lib, "dwmapi")
 
 import dcomp;
 
@@ -455,6 +460,16 @@ SpriteVisual CreateTextVisual(Compositor compositor, std::wstring const &text) {
       )
   );
 
+  DWRITE_TEXT_RANGE full_range{0, (uint32_t)text.size()};
+
+  winrt::check_hresult(textLayout->SetFontSize(
+    config::DanmakuConfig::singleton().FontSize(),
+    full_range));
+
+  winrt::check_hresult(textLayout->SetFontFamilyName(
+    config::DanmakuConfig::singleton().FontFamily().c_str(),
+    full_range));
+
   DWRITE_TEXT_METRICS metrics;
   winrt::check_hresult(textLayout->GetMetrics(&metrics));
   ABI::Windows::Foundation::Size surfaceSize = { metrics.width, metrics.height };
@@ -493,6 +508,57 @@ SpriteVisual CreateTextVisual(Compositor compositor, std::wstring const &text) {
   visual.Brush(textBrush);
   visual.Size({ metrics.width, metrics.height });
   return visual;
+}
+
+std::vector<std::wstring> GetSystemFontList() {
+
+  InitDcompModule();
+
+  std::vector<std::wstring> fontList;
+
+  winrt::com_ptr<IDWriteFontCollection> coll;
+  winrt::check_hresult(dwFactory->GetSystemFontCollection(coll.put()));
+
+  
+  uint32_t familyCount = coll->GetFontFamilyCount();
+
+  for (uint32_t i = 0; i < familyCount; ++i) {
+    winrt::com_ptr<IDWriteFontFamily> family;
+    winrt::check_hresult(coll->GetFontFamily(i, family.put()));
+
+    winrt::com_ptr<IDWriteLocalizedStrings> familyNames;
+    winrt::check_hresult(family->GetFamilyNames(familyNames.put()));
+
+    uint32_t index = 0;
+    BOOL exists = false;
+
+    wchar_t localeName[LOCALE_NAME_MAX_LENGTH];
+    int defaultLocaleSuccess =
+        GetUserDefaultLocaleName(localeName, LOCALE_NAME_MAX_LENGTH);
+    if (defaultLocaleSuccess) {
+      winrt::check_hresult(
+          familyNames->FindLocaleName(localeName, &index, &exists));
+    } else {
+      winrt::check_hresult(
+          familyNames->FindLocaleName(L"en-us", &index, &exists));
+    }
+
+    if (!exists) {
+      index = 0;
+    }
+
+    uint32_t length = 0;
+    winrt::check_hresult(familyNames->GetStringLength(index, &length));
+
+    std::wstring name;
+    name.resize(length);
+    name.reserve(length + 1);
+    winrt::check_hresult(familyNames->GetString(index, name.data(), length + 1));
+
+    fontList.push_back(name);
+  }
+
+  return fontList;
 }
 
 } // namespace dcomp

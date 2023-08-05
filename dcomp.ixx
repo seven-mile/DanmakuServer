@@ -20,4 +20,6 @@ winrt::Windows::UI::Composition::SpriteVisual CreateTextVisual(
   std::wstring const &text
 );
 
+std::vector<std::wstring> GetSystemFontList();
+
 } // namespace dcomp

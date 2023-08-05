@@ -1,0 +1,158 @@
+﻿<Page
+    x:Class="DanmakuServer.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:DanmakuServer"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ms-appx:///Mile.Xaml.Styles.SunValley.xbf" />
+                <ResourceDictionary>
+                    <Style x:Key="MicaCardBorder" TargetType="Border">
+                        <Setter Property="Background" Value="{ThemeResource LayerFillColorDefaultBrush}"/>
+                        <Setter Property="CornerRadius" Value="8"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                        <Setter Property="Padding" Value="10,16,10,16"/>
+                        <Setter Property="Margin" Value="0,0,0,6"/>
+                    </Style>
+                    <!--<Style x:Key="MicaCardExpander" TargetType="Expander">
+                        <Setter Property="Background" Value="{ThemeResource LayerFillColorDefaultBrush}"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                    </Style>-->
+                    <Style x:Key="MicaCardCommandLink" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="10"/>
+                        <Setter Property="Margin" Value="0,0,0,16"/>
+                    </Style>
+                </ResourceDictionary>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Page.Resources>
+    
+    <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                Padding="45">
+        <TextBlock Text="Danmaku Appearance" Margin="5,8,5,8" Style="{StaticResource BodyStrongTextBlockStyle}" />
+        <Border Style="{StaticResource MicaCardBorder}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE727;" Margin="5,0,15,0" />
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Opacity" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="The opacity of all danmakus, real between 0% and 100%." />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border HorizontalAlignment="Right" Width="140">
+                    <Slider Minimum="0" Maximum="1" StepFrequency="0.01" Value="{x:Bind ViewModel.Opacity, Mode=TwoWay}" />
+                </Border>
+            </Grid>
+        </Border>
+        <Border Style="{StaticResource MicaCardBorder}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xEC92;" Margin="5,0,15,0" />
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Duration" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="The time for every danmaku to display on the screen, real between 5.0s and 15.0s." />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border HorizontalAlignment="Right" Width="140">
+                    <Slider Minimum="5" Maximum="15" StepFrequency="0.1" Value="{x:Bind ViewModel.DurationInSec, Mode=TwoWay}" />
+                </Border>
+            </Grid>
+        </Border>
+        <Border Style="{StaticResource MicaCardBorder}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xE8E9;" Margin="5,0,15,0" />
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Font Size" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           Text="Real between 12 and 64." />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border HorizontalAlignment="Right" Width="140">
+                    <Slider Minimum="12" Maximum="64" StepFrequency="0.1" Value="{x:Bind ViewModel.FontSize, Mode=TwoWay}" />
+                </Border>
+            </Grid>
+        </Border>
+        <Border Style="{StaticResource MicaCardBorder}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xEDFB;" Margin="5,0,15,0" />
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Font Family" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+            Text="The font used for rendering danmakus. Only installed fonts are listed." />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border HorizontalAlignment="Right" Width="140">
+                    <ComboBox d:SelectedIndex="0" HorizontalAlignment="Stretch"
+                              ItemsSource="{x:Bind ViewModel.InstalledFonts}"
+                              SelectedIndex="{x:Bind ViewModel.FontIndex, Mode=TwoWay}">
+                        <d:ComboBoxItem Content="Moszzz" />
+                        <d:ComboBoxItem Content="Microsoft Yahei 222222222222" />
+                    </ComboBox>
+                </Border>
+            </Grid>
+        </Border>
+
+        <TextBlock Text="Lane Layout" Margin="5,8,5,8" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+        <Border Style="{StaticResource MicaCardBorder}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xED5E;" Margin="5,0,15,0" />
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Lane Height" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="The space between two danmakus, real between 5.0 and 50.0." />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border HorizontalAlignment="Right" Width="140">
+                    <Slider Minimum="5" Maximum="50" StepFrequency="0.1" Value="{x:Bind ViewModel.DanmakuHeight, Mode=TwoWay}" />
+                </Border>
+            </Grid>
+        </Border>
+        <Border Style="{StaticResource MicaCardBorder}">
+            <Grid>
+                <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                    <FontIcon FontFamily="{ThemeResource SymbolThemeFontFamily}" Glyph="&#xF5A7;" Margin="5,0,15,0" />
+                    <StackPanel Orientation="Vertical" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource BodyTextBlockStyle}" Text="Use Top k Lanes" />
+                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="Use top k lanes only. Ignored if less than k lanes on screen." />
+                    </StackPanel>
+                </StackPanel>
+
+                <Border HorizontalAlignment="Right" Width="140">
+                    <Slider Minimum="1" Maximum="100" StepFrequency="1" Value="{x:Bind ViewModel.RequestedLaneCount, Mode=TwoWay}" />
+                </Border>
+            </Grid>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                    Margin="10">
+            <Button x:Name="ApplyButton" Click="ApplyButton_Clicked" Style="{StaticResource AccentButtonStyle}"
+                    Margin="4">
+                Apply Changes
+            </Button>
+            <HyperlinkButton x:Name="DiscardButton" Click="DiscardButton_Clicked" Margin="12,4,4,4">
+                Discard
+            </HyperlinkButton>
+        </StackPanel>
+    </StackPanel>
+</Page>

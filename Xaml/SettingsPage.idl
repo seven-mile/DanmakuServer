@@ -1,0 +1,11 @@
+import "Xaml/SettingsPageViewModel.idl";
+
+namespace DanmakuServer
+{
+    [default_interface]
+    runtimeclass SettingsPage : Windows.UI.Xaml.Controls.Page
+    {
+        SettingsPage();
+        SettingsPageViewModel ViewModel{ get; };
+    }
+}
