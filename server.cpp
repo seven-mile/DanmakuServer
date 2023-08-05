@@ -165,7 +165,7 @@ DanmakuServer::DanmakuServer(danmaku_handler_t handler) {
 
         if (abs_path.starts_with(L"/version")) {
           handled = true;
-          SendHttpJsonResponse(req_queue, req, 200, "OK", R"({"version": 1, "repo": "https://github.com/iceking2nd/real-url"})");
+          SendHttpJsonResponse(req_queue, req, 200, "OK", R"({"version": 1, "repo": "https://github.com/seven-mile/DanmakuServer"})");
         } else if (abs_path.starts_with(L"/danmaku")) {
           handled = true;
           auto args = ParseQueryString(query_string);
