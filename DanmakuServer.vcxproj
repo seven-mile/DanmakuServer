@@ -159,7 +159,7 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <Manifest Include="..\Playground\DComp\app.manifest" />
+    <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
