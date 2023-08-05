@@ -102,6 +102,9 @@ std::map<std::wstring, std::wstring> ParseQueryString(std::wstring_view query_st
 
 DanmakuServer::DanmakuServer(danmaku_handler_t handler) {
 
+  cancel_event = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+  request_event = ::CreateEvent(NULL, TRUE, FALSE, NULL);
+
   winrt::check_win32(
       HttpInitialize(HTTPAPI_VERSION_2, HTTP_INITIALIZE_SERVER, NULL));
 
@@ -130,19 +133,31 @@ DanmakuServer::DanmakuServer(danmaku_handler_t handler) {
   winrt::check_win32(HttpSetUrlGroupProperty(
       group_id, HttpServerBindingProperty, &bding, sizeof(bding)));
 
-  running = true;
-
   std::thread th{[=] {
     constexpr int RECV_BUFFER_SIZE = 4096;
     auto recv_buffer = std::make_unique<char[]>(RECV_BUFFER_SIZE);
     HTTP_REQUEST &req = *(HTTP_REQUEST *)recv_buffer.get();
-    while (running.load()) {
+    while (true) {
       memset(recv_buffer.get(), 0, RECV_BUFFER_SIZE);
 
       ULONG bytes_returned;
-      winrt::check_win32(HttpReceiveHttpRequest(req_queue, HTTP_NULL_ID, 0,
+      OVERLAPPED ov{};
+      ov.hEvent = request_event;
+      auto ret = HttpReceiveHttpRequest(req_queue, HTTP_NULL_ID, 0,
                                                 &req, RECV_BUFFER_SIZE,
-                                                &bytes_returned, NULL));
+                                                &bytes_returned, &ov);
+
+      if (ret != ERROR_IO_PENDING) {
+        winrt::check_win32(ret);
+      }
+
+      DWORD ev = ::WaitForMultipleObjects(2, &cancel_event, FALSE, INFINITE);
+      if (ev == 0) {
+        // cancel event
+        break;
+      }
+      ResetEvent(request_event);
+
       bool handled = false;
       if (req.Verb == HttpVerbGET) {
         std::wstring_view abs_path{req.CookedUrl.pAbsPath, req.CookedUrl.AbsPathLength / sizeof(wchar_t)};
@@ -172,7 +187,7 @@ DanmakuServer::DanmakuServer(danmaku_handler_t handler) {
 }
 
 DanmakuServer::~DanmakuServer() {
-  running = false;
+  SetEvent(cancel_event);
   // wait util
   server_thread.join();
 

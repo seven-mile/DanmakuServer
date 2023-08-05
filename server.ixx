@@ -3,6 +3,8 @@ module;
 #include <string>
 #include <thread>
 #include <atomic>
+
+#include <Windows.h>
 export module server;
 
 export namespace server {
@@ -15,7 +17,7 @@ class DanmakuServer {
 
   danmaku_handler_t handler;
   std::thread server_thread;
-  std::atomic<bool> running;
+  HANDLE cancel_event, request_event;
 
 public:
 
