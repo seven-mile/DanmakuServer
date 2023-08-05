@@ -492,7 +492,8 @@ SpriteVisual CreateTextVisual(Compositor compositor, std::wstring const &text) {
   winrt::check_hresult(d2dCtx->CreateSolidColorBrush(
       D2D1::ColorF(D2D1::ColorF::White, 1.0f), brush.put()));
 
-  d2dCtx->DrawTextLayout(D2D1::Point2F(1.f * updateOffset.x, 1.f * updateOffset.y), textLayout.get(), brush.get());
+  d2dCtx->DrawTextLayout(D2D1::Point2F(1.f * updateOffset.x, 1.f * updateOffset.y),
+    textLayout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
 
   winrt::check_hresult(drawingSurface->EndDraw());
 

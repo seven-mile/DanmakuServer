@@ -78,7 +78,7 @@ private:
     td.pszMainInstruction = L"Danmaku Server 1.1";
     td.pszContent = 
 LR"(Please check our <a href="https://github.com/seven-mile/DanmakuServer">GitHub Repo</a> for more information.
-The danmaku server is hosted on :7654 port, access <a href="http://localhost:7654/danmaku?name=danmaku%20server&content=hello,%20world">this url</a> for sample danmaku effect.)";
+The danmaku server is hosted on :7654 port, access <a href="http://localhost:7654/danmaku?name=danmaku%20server&content=hello,%20world%F0%9F%92%98">this url</a> for sample danmaku effect.)";
     td.nDefaultButton = TDCBF_OK_BUTTON;
     td.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lParam, LONG_PTR) {
       if (msg == TDN_HYPERLINK_CLICKED) {
