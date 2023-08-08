@@ -288,7 +288,7 @@ public:
     };
 
     threading::ThreadPoolTimer::CreatePeriodicTimer([this](auto const &){
-      for (int i=0; i<2; i++) {
+      for (int i=0; i<20; i++) {
         danmaku_mgr->IssueDanmaku(gen_text());
       }
     }, 300ms);

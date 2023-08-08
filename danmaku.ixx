@@ -63,59 +63,35 @@ class DanmakuManager {
 
     auto batch = compositor.CreateScopedBatch(comp::CompositionBatchTypes::Animation);
     
-    auto duration1 = std::chrono::duration_cast<found::TimeSpan>(
+    auto duration_entry = std::chrono::duration_cast<found::TimeSpan>(
       duration * (width / (width + scr_width)));
-    auto duration2 = duration - duration1;
+
 
     // Apply screen entry animation
     {
       auto anim = compositor.CreateVector3KeyFrameAnimation();
       anim.InsertKeyFrame(0.F, {scr_width, ypos, 0}, spring);
-      anim.InsertKeyFrame(1.F, {scr_width-width, ypos, 0}, spring);
-      anim.Duration(duration1);
+      anim.InsertKeyFrame(1.F, {-width, ypos, 0}, spring);
+      anim.Duration(duration);
       anim.IterationBehavior(comp::AnimationIterationBehavior::Count);
       anim.IterationCount(1);
       danmaku.StartAnimation(L"Offset", anim);
+      // When the danmaku is off the screen edge, free the lane
+      threading::ThreadPoolTimer::CreateTimer([=, this](auto &) {
+        std::lock_guard g{mtx};
+        // Pop issuing for other danmaku
+        assert(std::get<0>(lane_state[lane_id].front()) == danmaku);
+        PopLane(lane_id);
+        // Issue right after the vacancy
+        if (lane_state[lane_id].size())
+          IssueLane(lane_id);
+      }, duration_entry);
     }
 
     batch.End();
 
-    // When the danmaku is off the screen edge,
-    // free the lane and start the remaining animation
     batch.Completed([=, this](auto &, auto &){
-      std::lock_guard g{mtx};
-      // Pop issuing for other danmaku
-      assert(std::get<0>(lane_state[lane_id].front()) == danmaku);
-      PopLane(lane_id);
-      // Issue right after the vacancy
-      if (lane_state[lane_id].size())
-        IssueLane(lane_id);
-
-      auto batch = compositor.CreateScopedBatch(comp::CompositionBatchTypes::Animation);
-  
-      auto ypos = danmaku.Offset().y;
-      auto width = danmaku.Size().x;
-
-      // Apply screen entry animation
-      {
-        // it's a tunable position offset to
-        // pretend the animation is connected
-        constexpr int CPU_OFFSET = 0;
-        auto anim = compositor.CreateVector3KeyFrameAnimation();
-        anim.InsertKeyFrame(0.F, {scr_width-width-CPU_OFFSET, ypos, 0}, spring);
-        anim.InsertKeyFrame(1.F, {-width, ypos, 0}, spring);
-        anim.Duration(duration2);
-        anim.IterationBehavior(comp::AnimationIterationBehavior::Count);
-        anim.IterationCount(1);
-        danmaku.StartAnimation(L"Offset", anim);
-      }
-
-      batch.End();
-
-      batch.Completed([deleter, danmaku](auto &, auto &) {
-        // free it
-        deleter(danmaku);
-      });
+      deleter(danmaku);
     });
   }
 
