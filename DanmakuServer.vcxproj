@@ -137,6 +137,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Xaml\BooleanToVisibilityConverter.cpp">
+      <DependentUpon>Xaml\BooleanToVisibilityConverter.idl</DependentUpon>
+      <SubType>Code</SubType>
+    </ClCompile>
     <ClCompile Include="Xaml\SettingsPageViewModel.cpp">
       <DependentUpon>Xaml\SettingsPageViewModel.idl</DependentUpon>
       <SubType>Code</SubType>
@@ -164,6 +168,10 @@
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Xaml\BooleanToVisibilityConverter.h">
+      <DependentUpon>Xaml\BooleanToVisibilityConverter.idl</DependentUpon>
+      <SubType>Code</SubType>
+    </ClInclude>
     <ClInclude Include="Xaml\SettingsPageViewModel.h">
       <DependentUpon>Xaml\SettingsPageViewModel.idl</DependentUpon>
       <SubType>Code</SubType>
@@ -186,6 +194,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <Midl Include="Xaml\BooleanToVisibilityConverter.idl">
+      <SubType>Designer</SubType>
+    </Midl>
     <Midl Include="Xaml\SettingsPageViewModel.idl">
       <SubType>Designer</SubType>
     </Midl>

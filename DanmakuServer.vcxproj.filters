@@ -89,5 +89,8 @@
     <Midl Include="Xaml\SettingsPageViewModel.idl">
       <Filter>UI Files</Filter>
     </Midl>
+    <Midl Include="Xaml\BooleanToVisibilityConverter.idl">
+      <Filter>UI Files</Filter>
+    </Midl>
   </ItemGroup>
 </Project>

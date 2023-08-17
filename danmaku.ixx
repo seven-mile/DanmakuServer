@@ -16,9 +16,9 @@ class DanmakuManager {
   using deleter_t = std::function<void(danmaku_t)>;
 
 
-  comp::Compositor compositor;
-  comp::ContainerVisual root;
-  comp::CompositionEasingFunction spring;
+  comp::Compositor compositor{nullptr};
+  comp::ContainerVisual root{nullptr};
+  comp::CompositionEasingFunction spring{nullptr};
 
   std::recursive_mutex mtx;
 
@@ -97,10 +97,17 @@ class DanmakuManager {
 
 public:
 
-  DanmakuManager(comp::Compositor compositor, comp::ContainerVisual root)
-    : compositor(compositor), root(root),
-      spring(compositor.CreateLinearEasingFunction()) {
+  static DanmakuManager &singleton() {
+    static DanmakuManager instance;
+    return instance;
+  }
+
+  void Initialize(comp::Compositor compositor, comp::ContainerVisual root) {
     
+    this->compositor = compositor;
+    this->root = root;
+    this->spring = compositor.CreateLinearEasingFunction();
+
     auto update_lane_cnt = [this](){
       std::lock_guard g{mtx};
       lane_cnt = std::min(

@@ -10,6 +10,8 @@
 //#include "Xaml/App.h"
 #include "Xaml/SettingsPage.h"
 
+#include "BooleanToVisibilityConverter.g.h"
+
 import dcomp;
 import danmaku;
 import server;
@@ -22,6 +24,7 @@ public:
   BEGIN_MSG_MAP(SettingsWnd)
   MESSAGE_HANDLER(WM_CREATE, OnCreate)
   MESSAGE_HANDLER(WM_CLOSE, OnClose)
+  MESSAGE_HANDLER(WM_GETMINMAXINFO, OnMinMaxInfo)
   END_MSG_MAP()
 
   DECLARE_WND_SUPERCLASS(_T("Danmaku.SettingsWindow"), _T("Mile.Xaml.ContentWindow"));
@@ -38,6 +41,14 @@ public:
     return S_OK;
   }
 
+  LRESULT OnMinMaxInfo(UINT, WPARAM, LPARAM lParam, BOOL &) {
+    LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+    auto dpi = GetDpiForWindow(m_hWnd);
+    lpMMI->ptMinTrackSize.x = 760 * dpi / 96;
+    lpMMI->ptMinTrackSize.y = 400 * dpi / 96;
+    return S_OK;
+  }
+
   static SettingsWnd &singleton() {
     static SettingsWnd wnd;
     return wnd;
@@ -48,7 +59,11 @@ public:
   }
 
   static DWORD GetWndStyle(DWORD dwStyle) {
-    return dwStyle | WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU;
+    return dwStyle | WS_OVERLAPPEDWINDOW;
+  }
+
+  static DWORD GetWndExStyle(DWORD dwExStyle) {
+    return dwExStyle | WS_EX_TOPMOST;
   }
 
 };
@@ -257,7 +272,8 @@ class DanmakuWnd : public ATL::CWindowImpl<DanmakuWnd> {
   comp::ContainerVisual root{nullptr};
   uicore::CoreDispatcher dispatcher{nullptr};
 
-  std::unique_ptr<danmaku::DanmakuManager> danmaku_mgr;
+  danmaku::DanmakuManager &danmaku_mgr{danmaku::DanmakuManager::singleton()};
+
   std::unique_ptr<server::DanmakuServer> danmaku_srv;
 
 public:
@@ -289,7 +305,7 @@ public:
 
     threading::ThreadPoolTimer::CreatePeriodicTimer([this](auto const &){
       for (int i=0; i<20; i++) {
-        danmaku_mgr->IssueDanmaku(gen_text());
+        danmaku_mgr.IssueDanmaku(gen_text());
       }
     }, 300ms);
   }
@@ -300,13 +316,13 @@ public:
     dispatcher = dcomp::GetOrCreateCoreDispatcher();
     std::tie(compositor, root) = dcomp::CreateCompositorForWindow(m_hWnd);
 
-    danmaku_mgr = std::make_unique<danmaku::DanmakuManager>(compositor, root);
+    danmaku_mgr.Initialize(compositor, root);
 
     //TestDanmakuSingleIssueMode();
     //TestDanmakuCanvasMode();
 
     danmaku_srv = std::make_unique<server::DanmakuServer>([&](std::wstring const &danmaku){
-      danmaku_mgr->IssueDanmaku(danmaku);
+      danmaku_mgr.IssueDanmaku(danmaku);
     });
 
     return 0;
@@ -337,8 +353,26 @@ int APIENTRY wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
   auto &tray_icon = ShellIconWnd::singleton();
   auto &settings = SettingsWnd::singleton();
 
-  //auto xaml_app = winrt::make<winrt::DanmakuServer::implementation::App>();
   winrt::check_hresult(::MileXamlGlobalInitialize());
+  //auto xaml_app = winrt::make<winrt::DanmakuServer::implementation::App>();
+  auto app = winrt::Windows::UI::Xaml::Application::Current();
+  {
+    winrt::Windows::UI::Xaml::ResourceDictionary dict;
+    dict.Source(found::Uri(L"ms-appx:///Mile.Xaml.Styles.SunValley.xbf"));
+    app.Resources().MergedDictionaries().Append(
+      dict
+    );
+
+    //<local:BooleanToVisibilityConverter x:Key="TrueToVisibleConverter" Positive="True" />
+    //<local:BooleanToVisibilityConverter x:Key="FalseToVisibleConverter" Positive="False" />
+
+    winrt::DanmakuServer::BooleanToVisibilityConverter posi_conv, nega_conv;
+    posi_conv.Positive(true);
+    nega_conv.Positive(false);
+
+    app.Resources().Insert(winrt::box_value(L"TrueToVisibleConverter"), posi_conv);
+    app.Resources().Insert(winrt::box_value(L"FalseToVisibleConverter"), nega_conv);
+  }
 
   tray_icon.SetShellVisible();
 

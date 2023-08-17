@@ -6,6 +6,7 @@
 
 #include "../config.hpp"
 
+import danmaku;
 import dcomp;
 
 namespace winrt::DanmakuServer::implementation
@@ -56,4 +57,40 @@ namespace winrt::DanmakuServer::implementation
       auto &cfg = config::DanmakuConfig::singleton();
       throw winrt::hresult_not_implemented{};
     }
+    
+    void SettingsPageViewModel::StartTest() {
+      assert(!test_timer);
+      static std::default_random_engine rd{998244353};
+      static std::wstring lorem{L"Lorem ipsum dolor sit amet Allocated, linux? kernel function is that"};
+
+      static std::uniform_int_distribution text_gen{1, (int)lorem.size()};
+      static auto gen_text = [](){
+        std::wstring text{wchar_t(L'A' + (text_gen(rd) % 26))};
+        for (int i = 0; i < text_gen(rd); ++i) {
+          text += lorem[text_gen(rd)];
+        }
+        return text;
+      };
+
+      test_timer = threading::ThreadPoolTimer::CreatePeriodicTimer([this](auto const &){
+        auto batch_size = std::map<int, int>{
+          {0, 2},
+          {1, 8},
+          {2, 12},
+          {3, 20}
+        }[test_index];
+        for (int i=0; i<batch_size; i++) {
+          danmaku::DanmakuManager::singleton().IssueDanmaku(gen_text());
+        }
+      }, 300ms);
+    }
+
+    void SettingsPageViewModel::StopTest() {
+      assert(test_timer);
+      if (test_timer) {
+        test_timer.Cancel();
+        test_timer = nullptr;
+      }
+    }
+
 }

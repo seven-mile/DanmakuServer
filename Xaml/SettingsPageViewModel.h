@@ -34,6 +34,38 @@ namespace winrt::DanmakuServer::implementation
           return installed_fonts;
         }
 
+        bool IsTestRunning() { return is_test_running; }
+        void IsTestRunning(bool value) {
+          is_test_running = value;
+          if (value) {
+            StartTest();
+          } else {
+            StopTest();
+          }
+          NotifyChanged(L"IsTestRunning");
+        }
+
+        int TestIndex() { return test_index; }
+        void TestIndex(int value) {
+          test_index = value;
+          NotifyChanged(L"TestIndex");
+          NotifyChanged(L"TestLevelString");
+        }
+
+        hstring TestLevelString() {
+            switch (test_index) {
+              case 0:
+                return L"Silent";
+              case 1:
+                return L"Normal";
+              case 2:
+                return L"Noisy";
+              default:
+                return L"Overwhelming";
+            }
+        }
+
+        // configs
         void ApplyChanges();
         void LoadFromCurrent();
         void ResetDefault();
@@ -50,6 +82,10 @@ namespace winrt::DanmakuServer::implementation
 
       private:
 
+        // test
+        void StartTest();
+        void StopTest();
+
         float opacity = 1.f;
         float duration_in_sec = 10.f;
         float danmaku_height = 32.f;
@@ -59,6 +95,10 @@ namespace winrt::DanmakuServer::implementation
 
         found::Collections::IObservableVector<hstring> installed_fonts
           = single_threaded_observable_vector<hstring>();
+
+        bool is_test_running = false;
+        int test_index = 0;
+        threading::ThreadPoolTimer test_timer{nullptr};
 
         winrt::event<xdata::PropertyChangedEventHandler> property_changed;
         void NotifyChanged(hstring const &prop) {

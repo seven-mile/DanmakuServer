@@ -1,5 +1,6 @@
 namespace DanmakuServer
 {
+
     [bindable]
     [default_interface]
     runtimeclass SettingsPageViewModel : Windows.UI.Xaml.Data.INotifyPropertyChanged
@@ -15,6 +16,11 @@ namespace DanmakuServer
 
         Windows.Foundation.Collections.IObservableVector<String> InstalledFonts{ get; };
 
+        Boolean IsTestRunning;
+        Int32 TestIndex;
+        String TestLevelString{get;};
+
+        // configs
         void ApplyChanges();
         void LoadFromCurrent();
         void ResetDefault();

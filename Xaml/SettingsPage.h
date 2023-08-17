@@ -22,6 +22,21 @@ namespace winrt::DanmakuServer::implementation
           m_viewModel.LoadFromCurrent();
         }
 
+        void TestButton_IsCheckedChanged(found::IInspectable const&, ui::Xaml::Controls::ToggleSplitButtonIsCheckedChangedEventArgs const&) {
+          if (TestButton().IsChecked()) {
+            m_viewModel.IsTestRunning(true);
+          } else {
+            m_viewModel.IsTestRunning(false);
+          }
+        }
+
+        void TestMenuFlyoutItem_Clicked(found::IInspectable const&sender, Windows::UI::Xaml::RoutedEventArgs const&) {
+          auto elem = sender.as<ui::Xaml::FrameworkElement>();
+          auto tag = elem.Tag();
+          auto tag_value = unbox_value<hstring>(tag);
+          m_viewModel.TestIndex(std::wcstol(tag_value.c_str(), nullptr, 10));
+        }
+
       private:
         DanmakuServer::SettingsPageViewModel m_viewModel{ nullptr };
     };

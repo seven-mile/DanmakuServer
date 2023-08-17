@@ -1,0 +1,10 @@
+namespace DanmakuServer
+{
+	  [default_interface]
+    runtimeclass BooleanToVisibilityConverter : Windows.UI.Xaml.Data.IValueConverter
+		{
+		    BooleanToVisibilityConverter();
+
+				Boolean Positive;
+		}
+}
