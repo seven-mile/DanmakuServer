@@ -57,14 +57,20 @@ void SendHttpJsonResponse(HANDLE req_queue, HTTP_REQUEST &req, USHORT status,
                                           ));
 }
 
-std::wstring UrlDecodeWString(std::wstring const &input) {
-  std::wstring result;
+std::wstring UrlDecodeWString(std::wstring const &inputw) {
+  std::string result;
   DWORD cnt;
-  AtlUnescapeUrl(input.c_str(), result.data(), &cnt, DWORD(result.size()));
+
+  std::string inputa;
+  inputa.resize(inputw.size() + 1);
+  winrt::check_bool(AtlUnicodeToUTF8(inputw.c_str(), inputw.size(), inputa.data(), inputw.size() + 1));
+
+  AtlUnescapeUrl(inputa.c_str(), result.data(), &cnt, DWORD(result.size()));
   result.resize(cnt);
-  winrt::check_bool(AtlUnescapeUrl(input.c_str(), result.data(), &cnt, DWORD(result.size())));
-  result.resize(lstrlenW(result.data()));
-  return result;
+  winrt::check_bool(AtlUnescapeUrl(inputa.c_str(), result.data(), &cnt, DWORD(result.size())));
+  result.resize(strlen(result.data()));
+
+  return LPWSTR(ATL::CA2W(result.c_str(), CP_UTF8));
 }
 
 std::map<std::wstring, std::wstring> ParseQueryString(std::wstring_view query_string) {
