@@ -311,6 +311,8 @@ public:
   }
 
   LRESULT OnCreate(UINT, WPARAM, LPARAM, BOOL &) {
+    // Refer to https://github.com/dechamps/RudeWindowFixer
+    winrt::check_bool(SetPropW(m_hWnd, L"NonRudeHWND", INVALID_HANDLE_VALUE));
     SetIcon(LoadIcon(_AtlBaseModule.GetResourceInstance(), MAKEINTRESOURCE(IDI_DANMAKU)), TRUE);
 
     dispatcher = dcomp::GetOrCreateCoreDispatcher();
