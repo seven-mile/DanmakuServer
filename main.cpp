@@ -90,7 +90,7 @@ private:
     td.dwFlags = TDF_ENABLE_HYPERLINKS;
     td.pszMainIcon = MAKEINTRESOURCE(m_CurrentIconResource);
     td.pszWindowTitle = L"About";
-    td.pszMainInstruction = L"Danmaku Server 1.1";
+    td.pszMainInstruction = L"Danmaku Server 1.5.3";
     td.pszContent = 
 LR"(Please check our <a href="https://github.com/seven-mile/DanmakuServer">GitHub Repo</a> for more information.
 The danmaku server is hosted on :7654 port, access <a href="http://localhost:7654/danmaku?name=danmaku%20server&content=hello,%20world%F0%9F%92%98">this url</a> for sample danmaku effect.)";

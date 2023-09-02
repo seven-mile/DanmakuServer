@@ -57,55 +57,6 @@ void SendHttpJsonResponse(HANDLE req_queue, HTTP_REQUEST &req, USHORT status,
                                           ));
 }
 
-std::wstring UrlDecodeWString(std::wstring const &inputw) {
-  std::string result;
-  DWORD cnt;
-
-  std::string inputa;
-  inputa.resize(inputw.size() + 1);
-  winrt::check_bool(AtlUnicodeToUTF8(inputw.c_str(), inputw.size(), inputa.data(), inputw.size() + 1));
-
-  AtlUnescapeUrl(inputa.c_str(), result.data(), &cnt, DWORD(result.size()));
-  result.resize(cnt);
-  winrt::check_bool(AtlUnescapeUrl(inputa.c_str(), result.data(), &cnt, DWORD(result.size())));
-  result.resize(strlen(result.data()));
-
-  return LPWSTR(ATL::CA2W(result.c_str(), CP_UTF8));
-}
-
-std::map<std::wstring, std::wstring> ParseQueryString(std::wstring_view query_string) {
-    std::map<std::wstring, std::wstring> result;
-
-    if (query_string.data() == nullptr)
-      return result;
-
-    // eat '?'
-    query_string = query_string.substr(1);
-
-    // Split the query_string by '&' to get individual key-value pairs
-    std::wstring key_value_pair;
-    std::wstringstream ss{std::wstring{query_string}};
-    while (std::getline(ss, key_value_pair, L'&')) {
-        // Split each key-value pair by '='
-        std::wstring key, value;
-        size_t equal_pos = key_value_pair.find(L'=');
-        if (equal_pos != std::wstring::npos) {
-            key = key_value_pair.substr(0, equal_pos);
-            value = key_value_pair.substr(equal_pos + 1);
-        } else {
-            key = key_value_pair;
-            value = L"";
-        }
-
-        key = UrlDecodeWString(key);
-        value = UrlDecodeWString(value);
-
-        result[key] = value;
-    }
-
-    return result;
-}
-
 DanmakuServer::DanmakuServer(danmaku_handler_t handler) {
 
   cancel_event = ::CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -166,16 +117,16 @@ DanmakuServer::DanmakuServer(danmaku_handler_t handler) {
 
       bool handled = false;
       if (req.Verb == HttpVerbGET) {
-        std::wstring_view abs_path{req.CookedUrl.pAbsPath, req.CookedUrl.AbsPathLength / sizeof(wchar_t)};
-        std::wstring_view query_string{req.CookedUrl.pQueryString, req.CookedUrl.QueryStringLength / sizeof(wchar_t)};
+        winrt::Windows::Foundation::Uri url{req.CookedUrl.pFullUrl};
 
-        if (abs_path.starts_with(L"/version")) {
+        if (url.Path().starts_with(L"/version")) {
           handled = true;
           SendHttpJsonResponse(req_queue, req, 200, "OK", R"({"version": 1, "repo": "https://github.com/seven-mile/DanmakuServer"})");
-        } else if (abs_path.starts_with(L"/danmaku")) {
+        } else if (url.Path().starts_with(L"/danmaku")) {
           handled = true;
-          auto args = ParseQueryString(query_string);
-          auto &name = args[L"name"], &content = args[L"content"];
+          auto args = url.QueryParsed();
+          auto name = args.GetFirstValueByName(L"name");
+          auto content = args.GetFirstValueByName(L"content");
           handler(std::format(L"{}: {}", name, content));
 
           SendHttpJsonResponse(req_queue, req, 200, "OK", R"({"code": 0, "message": "ok"})");

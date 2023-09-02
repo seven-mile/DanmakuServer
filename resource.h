@@ -3,7 +3,6 @@
 // 供 DanmakuServer.rc 使用
 //
 #define IDI_DANMAKU                     101
-#define IDI_ICON1                       103
 #define IDI_SETTINGS                    103
 #define IDM_TRAY                        40003
 #define IDMI_EXIT                       40004
