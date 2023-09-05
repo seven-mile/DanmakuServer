@@ -78,9 +78,9 @@ private:
   MESSAGE_HANDLER(WM_USER, OnNIProc)
   END_MSG_MAP()
 
-  static constexpr // {87810064-5698-45EB-B53D-B6CBD1924EB1}
+  static constexpr // {B742EA6E-FAB9-47A0-9FED-7865D3E3F430}
   const GUID GUID_TRAY_ICON = 
-  { 0x87810064, 0x5698, 0x45eb, { 0xb5, 0x3d, 0xb6, 0xcb, 0xd1, 0x92, 0x4e, 0xb1 } };
+    { 0xb742ea6e, 0xfab9, 0x47a0, { 0x9f, 0xed, 0x78, 0x65, 0xd3, 0xe3, 0xf4, 0x30 } };
 
   void ShowAbout() {
     TASKDIALOGCONFIG td{};
@@ -90,9 +90,10 @@ private:
     td.dwFlags = TDF_ENABLE_HYPERLINKS;
     td.pszMainIcon = MAKEINTRESOURCE(m_CurrentIconResource);
     td.pszWindowTitle = L"About";
-    td.pszMainInstruction = L"Danmaku Server 1.5.3";
+    td.pszMainInstruction = L"Danmaku Server 1.5.5";
     td.pszContent = 
 LR"(Please check our <a href="https://github.com/seven-mile/DanmakuServer">GitHub Repo</a> for more information.
+
 The danmaku server is hosted on :7654 port, access <a href="http://localhost:7654/danmaku?name=danmaku%20server&content=hello,%20world%F0%9F%92%98">this url</a> for sample danmaku effect.)";
     td.nDefaultButton = TDCBF_OK_BUTTON;
     td.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lParam, LONG_PTR) {
@@ -122,6 +123,7 @@ The danmaku server is hosted on :7654 port, access <a href="http://localhost:765
       // Add the icon into the shell
       ShellNotify(NIM_ADD);
       ShellNotify(NIM_SETVERSION);
+      m_bIconInited = true;
       return S_OK;
     } else {
       return HRESULT_FROM_WIN32(GetLastError());
@@ -129,10 +131,12 @@ The danmaku server is hosted on :7654 port, access <a href="http://localhost:765
   }
 
   void DestroyShell() {
-    ShellNotify(NIM_DELETE); // Remove the icon
-    if (m_hWnd != NULL) {
-      // Get rid of the hidden window
-      DestroyWindow();
+    if (m_bIconInited) {
+      ShellNotify(NIM_DELETE); // Remove the icon
+      if (m_hWnd != NULL) {
+        // Get rid of the hidden window
+        DestroyWindow();
+      }
     }
   }
 
@@ -151,7 +155,35 @@ The danmaku server is hosted on :7654 port, access <a href="http://localhost:765
                                       MAKEINTRESOURCE(m_CurrentIconResource));
     ::lstrcpyn(notifyIconData.szTip, m_CurrentText.c_str(),
                ARRAYSIZE(notifyIconData.szTip)); // Limit to 64 chars
-    ::Shell_NotifyIcon(msg, &notifyIconData);
+    if (!::Shell_NotifyIcon(msg, &notifyIconData)) {
+    
+      TASKDIALOGCONFIG td{};
+      td.cbSize = sizeof(td);
+      td.hwndParent = m_hWnd;
+      td.hInstance = GetModuleHandle(NULL);
+      td.dwFlags = TDF_ENABLE_HYPERLINKS;
+      td.pszMainIcon = TD_ERROR_ICON;
+      td.pszWindowTitle = L"Error";
+      td.pszMainInstruction = L"Failed to create notify icon";
+      td.pszContent = 
+LR"(Are you opening a *second* instance of DanmakuServer?
+
+Or, have you changed the binary location of a unpackaged installation? Refer to <a href="https://support.microsoft.com/en-gb/topic/system-icons-do-not-appear-in-the-notification-area-in-windows-vista-or-in-windows-7-until-you-restart-the-computer-eed17e13-f80a-fde3-39de-2adfc94d56e1">this article</a> for a workaround.
+
+If restarting explorer can't solve this problem, please create an issue on GitHub.)";
+      td.nDefaultButton = TDCBF_OK_BUTTON;
+      td.pfCallback = [](HWND hwnd, UINT msg, WPARAM, LPARAM lParam, LONG_PTR) {
+        if (msg == TDN_HYPERLINK_CLICKED) {
+          ShellExecute(hwnd, L"open", (LPCWSTR)lParam, NULL, NULL, SW_SHOW);
+        }
+        return S_OK;
+      };
+
+      winrt::check_hresult(TaskDialogIndirect(&td, NULL, NULL, NULL));
+
+      PostQuitMessage(-1);
+
+    }
   }
 
   LRESULT OnNIProc(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
@@ -259,6 +291,7 @@ public:
 
 private:
   bool m_bVisible;
+  bool m_bIconInited;
 
   int m_CurrentIconResource;
   std::wstring m_CurrentText;

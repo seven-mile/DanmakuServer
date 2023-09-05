@@ -67,6 +67,29 @@ index be295d3..eb1ac84 100644
 
 [2023-08-04 13-11-39.webm](https://github.com/seven-mile/DanmakuServer/assets/56445491/649419b3-dcdf-4eda-8dc4-35167b7fd4a0)
 
+## Known Issues
+
+> **Warning**
+> 
+> Due to some limitation of [Windows Notify Icon GUID Registry](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-notifyicondataa#troubleshooting),
+>   the icon may not be able to be shown.
+>   
+>   | | Windows 10 | Windows 11 |
+>   |---|---|---|
+>   | MSIX Packaged | Cannot update | Perfect |
+>   | Non Packaged | Cannot move path | Cannot move path |
+> 
+> * If you are using **Windows 10**, 
+> 
+>   * update MSIX-packaged installations, or
+>   * move the path of non-packaged installations
+> 
+> * If you are using **Windows 11**, the second situation still exists, but the combination of Win11 + MSIX Package works perfectly, at least on my machine.
+>   However, I cannot find any official document about this, so I'm not sure if it's a bug or a feature.
+> 
+> If you encounter such issue, you can try [this workaround](https://support.microsoft.com/en-gb/topic/system-icons-do-not-appear-in-the-notification-area-in-windows-vista-or-in-windows-7-until-you-restart-the-computer-eed17e13-f80a-fde3-39de-2adfc94d56e1)
+> to reset your notification settings.
+
 ## Implementation
 
 Thanks to:
