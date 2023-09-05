@@ -401,8 +401,23 @@ CreateCompositorForWindow(HWND hWnd) {
   wData.cbData = sizeof(BOOL);
   winrt::check_bool(lSetWindowCompositionAttribute(hWnd, &wData));
 
-  BOOL disable = FALSE;
-  winrt::check_hresult(DwmSetWindowAttribute(hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &disable, sizeof(disable)));
+  // if > 22000, then disable corner rounding
+  OSVERSIONINFOEX info{
+      .dwMajorVersion = 10,
+      .dwMinorVersion = 0,
+      .dwBuildNumber = 22000,
+  };
+  DWORDLONG dwlConditionMask = 0;
+  VER_SET_CONDITION(dwlConditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
+  VER_SET_CONDITION(dwlConditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);
+  VER_SET_CONDITION(dwlConditionMask, VER_BUILDNUMBER, VER_GREATER_EQUAL);
+  if (VerifyVersionInfo(&info,
+                        VER_MAJORVERSION | VER_MINORVERSION | VER_BUILDNUMBER,
+                        dwlConditionMask)) {
+    BOOL disable = FALSE;
+    winrt::check_hresult(DwmSetWindowAttribute(
+        hWnd, DWMWA_WINDOW_CORNER_PREFERENCE, &disable, sizeof(disable)));
+  }
 
   return {compositor, rootVisual};
 }
