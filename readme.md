@@ -69,7 +69,7 @@ index be295d3..eb1ac84 100644
 
 ## Known Issues
 
-> **Warning**
+> [!WARNING]
 > 
 > Due to some limitation of [Windows Notify Icon GUID Registry](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-notifyicondataa#troubleshooting),
 >   the icon may not be able to be shown.
